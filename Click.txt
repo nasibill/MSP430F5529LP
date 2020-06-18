@@ -1,0 +1,96 @@
+#include "msp430.h"
+
+int main(void)
+{
+  WDTCTL = WDTPW + WDTHOLD;                 // Stop watchdog timer
+  P1DIR |= 0x01;                            // Set P1.0 to output direction
+  P1REN=0x02;                               // Set P1.1 to input direction with pullup
+  P1OUT=0x02;
+  P4DIR |= 0x80;                            // Set P4.7 to output direction
+  P2REN=0x02;                               // Set P2.1 to output direction
+  P2OUT=0x02;
+  volatile unsigned int freeze=0;
+  volatile unsigned int d_freq=0;
+  volatile unsigned int b_pressed=0;
+  volatile unsigned int b2_pressed=0;
+  volatile unsigned int i=0;
+  volatile unsigned int cycle_count=0;
+  for (;;)
+  {
+    b_pressed = P1IN;                 //scan SW1 (start/stop)
+    b_pressed = b_pressed & BIT1;
+
+    b2_pressed = P2IN;                //scan SW2 (Frequncy togle)
+    b2_pressed = b2_pressed & BIT1;
+
+
+  if(!b_pressed) {          //set state
+           do{              //wait for SW1 release
+
+              b_pressed = P1IN;
+              b_pressed = b_pressed & BIT1;
+              }
+          while(!b_pressed);
+          freeze=!freeze;  //togle state
+  }
+
+
+  if(!b2_pressed) {   //set frequency
+           do{
+              b2_pressed = P2IN;
+              b2_pressed = b2_pressed & BIT1;
+           }
+           while(!b2_pressed);
+          d_freq=!d_freq; //change frequency
+  }
+
+
+  if(!freeze){
+
+            cycle_count++;
+            if (d_freq) { //if in double frequency toggle GREEN LED
+                i=2500;
+                    P4OUT ^=0x80;}
+            if (cycle_count==2) {
+                cycle_count=0;
+                P1OUT ^=0x01;  // toggle RED LED(every ~1 sec)
+                if (!d_freq){
+                    i=5000;
+                    P4OUT ^=0x80;
+                }
+        }
+     }
+
+      do {
+          i--;
+          b_pressed = P1IN;
+          b_pressed = b_pressed & BIT1;
+
+          b2_pressed = P2IN;
+          b2_pressed = b2_pressed & BIT1;
+
+
+          if(!b_pressed) {
+               do{
+
+                  b_pressed = P1IN;
+                  b_pressed = b_pressed & BIT1;
+
+                }
+              while(!b_pressed);
+              freeze=!freeze;
+              }
+          if(!b2_pressed) {   //set frequency
+                  do{
+                    b2_pressed = P2IN;
+                    b2_pressed = b2_pressed & BIT2;
+                      }
+                  while(!b2_pressed);
+              d_freq=!d_freq; //change frequency
+          }
+
+        }
+        while(i != 0);
+  }
+return 0;
+}
